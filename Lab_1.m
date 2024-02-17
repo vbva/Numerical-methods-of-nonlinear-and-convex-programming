@@ -53,8 +53,8 @@ noise_variance = 0.3;
 
 %Noise 1 (Gaussian noise):
 for i = 1:length(x)
-   w = sqrt(noise_variance) * randn; 
-   z(i) = y(i) + w; 
+   w(i) = sqrt(noise_variance) * randn(); 
+   z(i) = y2(i) + w(i); 
 end
 
 %---------------------------------------------------%
@@ -68,7 +68,7 @@ end
 %        end
 %     end
 %     w = sqrt(noise_variance) * randn; 
-%     z(i) = y(i) + w + v(i);
+%     z(i) = y2(i) + w + v(i);
 %     
 % end
 %---------------------------------------------------%
@@ -88,7 +88,7 @@ title('p1 - p2 - p3');
 
 %plot_2
 figure;
-plot(x, y, 'b', 'LineWidth', 2);
+plot(x, y2, 'b', 'LineWidth', 2);
 hold on;
 plot(x, z, 'r', 'LineWidth', 2); % noize mc
 grid on;
@@ -98,37 +98,53 @@ legend('Original Polynomial', 'Noisy Polynomial');
 title('y = p(x)');
 
 %1 LEAST SQUARE METHOD (LSM)  - got the best result 
-coeffs_lsm = polyfit(x,z,5);
-y_lsm = polyval(coeffs_lsm, x);
+d = sdpvar(6,1);
+p_1 = d(1) + d(2)*x + d(3)*x.^2 + d(4)*x.^3 + d(5)*x.^4 + d(6)*x.^5;
+
+residuals_lsm = z - p_1;
+Objective_lsm = norm(residuals_lsm, 2);
+optimize(Constraints, Objective_lsm);
+y_lsm = value(p_1);
+error_lsm = max(abs(y_lsm - y2))
 
 %2 Chebyshev aproximation (CHEB)
-init_coeffs_cheb = zeros(1, 6);
-cheb_error_func = @(coeffs) max(abs(polyval(coeffs, x) - z_values));
-coeffs_cheb = fminsearch(cheb_error_func, init_coeffs_cheb);
-y_cheb = polyval(coeffs_cheb, x);
+d_2 = sdpvar(6,1);
+p_2 = d_2(1) + d_2(2)*x + d_2(3)*x.^2 + d_2(4)*x.^3 + d_2(5)*x.^4 + d_2(6)*x.^5;
+
+residuals_cheb = z - p_2;
+Objective_cheb = norm(residuals_cheb, inf);
+optimize(Constraints, Objective_cheb);
+y_cheb = value(p_2);
+error_cheb = max(abs(y_cheb-y2))
 
 %3 Minimizing the sum of error modules (Least abs err LAE)
-error_func = @(coeffs) sum(abs(polyval(coeffs, x) - z));
-init_coeffs_LAE = zeros(1, 6);
-coeffs_LAE = fminsearch(error_func, init_coeffs_LAE);
-y_lae = polyval(coeffs_LAE, x);
+d_3 = sdpvar(6,1);
+p_3 = d_3(1) + d_3(2)*x + d_3(3)*x.^2 + d_3(4)*x.^3 + d_3(5)*x.^4 + d_3(6)*x.^5;
 
-%4 Min the sum of penalty function: phi(t) = sqrt(abs(t)) - PF
-penalty_func = @(coeffs) sum(abs(polyval(coeffs, x) - z).^0.5);
-init_coeffs_PF = zeros(1, 6);
-coeffs_PF = fminsearch(penalty_func, init_coeffs_PF);
-y_pf = polyval(coeffs_PF, x);
+residuals_lae = z - p_3;
+Objective_lae = norm(residuals_lae, 1);
+optimize(Constraints, Objective_lae);
+y_lae = value(p_3);
+error_lae = max(abs(y_lae-y2))
 
+%4 Min the sum of penalty function: phi(t) = sqrt(abs(t))
+X  = value(c)    
+a_0 = 1.1 * X;
+opts = optimset('TolX', 1e-16,'MaxFunEvals', 10000, 'MaxIter', 10000, 'TolFun', 1e-16);
+[x_pen, f_val] = fminunc(@poly_value, c_0, opts);
+A5 = x_pen(6); B5 = x_pen(5); C5 = x_pen(4); D5 = x_pen(3);E5 = x_pen(2);F5 = x_pen(1);
+f4 = @(x)A5 * x.^5 + B5 * x.^4 + C5 * x.^3 + D5 * x.^2 + E5 * x + F5;
+error_pf = max(abs(f4(x)-y2))
 %plot_3
 figure;
-plot(x, y, 'k', 'LineWidth', 2); 
+plot(x, y2, 'k', 'LineWidth', 2); 
 hold on;
 
 plot(x, y_lsm, 'g', 'LineWidth', 2);
 plot(x, y_cheb, 'm', 'LineWidth', 2); 
 plot(x, y_lae, 'c', 'LineWidth', 2); 
 plot(x, y_pf , 'r', 'LineWidth', 2); 
-%plot(x, z, 'k--', 'LineWidth', 1); 
+plot(x, z, 'k--', 'LineWidth', 1); 
 
 legend('Original', 'Least Square Method', 'Chebyshev aproximation', 'Least Abs Error', 'Penalty Function', 'Noise');
 grid on;
@@ -138,6 +154,18 @@ title('comparison of methods');
 
 
 
+
+function func_value = poly_value(a)
+    global z;
+    A = [];
+    t_vec = @(tt) [ tt^0; tt^1; tt^2; tt^3; tt^4; tt^5 ];
+    n = length(z);
+
+    for i = 0 : 1 : n-1
+        A = [ A; abs(t_vec(0.1 * i)' * a' - z(i+1))^(0.5) ];
+    end
+    func_value = sum(A);
+end
 
 
 
