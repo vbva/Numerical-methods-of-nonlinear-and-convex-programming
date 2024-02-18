@@ -131,7 +131,7 @@ error_lae = max(abs(y_lae-y2))
 X  = value(c)    
 a_0 = 1.1 * X;
 opts = optimset('TolX', 1e-16,'MaxFunEvals', 10000, 'MaxIter', 10000, 'TolFun', 1e-16);
-[x_pen, f_val] = fminunc(@poly_value, c_0, opts);
+[x_pen, f_val] = fminunc(@poly_value, a_0, opts);
 A5 = x_pen(6); B5 = x_pen(5); C5 = x_pen(4); D5 = x_pen(3);E5 = x_pen(2);F5 = x_pen(1);
 f4 = @(x)A5 * x.^5 + B5 * x.^4 + C5 * x.^3 + D5 * x.^2 + E5 * x + F5;
 error_pf = max(abs(f4(x)-y2))
@@ -143,7 +143,7 @@ hold on;
 plot(x, y_lsm, 'g', 'LineWidth', 2);
 plot(x, y_cheb, 'm', 'LineWidth', 2); 
 plot(x, y_lae, 'c', 'LineWidth', 2); 
-plot(x, y_pf , 'r', 'LineWidth', 2); 
+plot(x, f4(x) , 'r', 'LineWidth', 2); 
 plot(x, z, 'k--', 'LineWidth', 1); 
 
 legend('Original', 'Least Square Method', 'Chebyshev aproximation', 'Least Abs Error', 'Penalty Function', 'Noise');
