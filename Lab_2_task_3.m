@@ -82,10 +82,4 @@ for i = 1:numImagesToShow
     
 end
 
-% disp('Коэффициенты гиперплоскости (w_opt):');
-% disp(w_opt);
-% 
-% disp('Смещение гиперплоскости (b_opt):');
-% disp(b_opt);
-
 
