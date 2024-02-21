@@ -5,7 +5,7 @@ T_real = calib.T;
 %init_par =[d1, a1, alpha1, 
                 % d2, a2, alpha2,
                 % d3, a3, alpha3,
-                % q1, q2, q3]
+                % theta1, theta2, theta3]
                   
 init_par = [300, 0, pi/2, ...
                   0, 400, 0, ...
@@ -13,20 +13,23 @@ init_par = [300, 0, pi/2, ...
                   0, 0, 0];
               
 %boundaries: angle +- 0.01rad, lenght +- 10mm
-lb = [290, -0.01, pi/2-0.01, -10, 390, -0.01, -10, 490, -0.01, -10, -0.01, -0.01];
-ub = [310, 0.01, pi/2+0.01, 10, 410, 0.01, 10, 510, 0.01, 10, 0.01, 0.01];
+% lb = [290, -0.01, pi/2-0.01, -10, 390, -0.01, -10, 490, -0.01, -0.01, -0.01, -0.01];
+% ub = [310, 0.01, pi/2+0.01, 10, 410, 0.01, 10, 510, 0.01, 0.01, 0.01, 0.01];
 
-options = optimoptions('fmincon','Display','iter','Algorithm','sqp');
+lb = [290, -10, pi/2 - 0.01, -10 , 390, -0.01, -10, 490, -0.01, -0.01, -0.01, -0.01];
+ub = [310, 10, pi/2 + 0.01, 10 , 410, 0.01, 10, 510, 0.01, 0.01, 0.01 , 0.01];
 
-[optimized_params, fval] = fmincon(@(params) obj_func(params, Q, T_real),...
-                                    init_par,[], [], [], [], lb, ub, [], options);
+%options = optimoptions('fmincon','Display','iter','Algorithm','sqp');
+options = optimset('TolX',1e-16,'MaxIter',2e3,'MaxFunEvals',2000);
+[optimized_params, fval] = fmincon(@(params) obj_func(params, Q, T_real),init_par,[], [], [], [], lb, ub, [], options);
 
 disp('Optimal parameters:');
 disp(optimized_params);
 disp('mean before:');
-disp(obj_func(init_par, Q, T_real)/size(Q,1));
+disp(obj_func(init_par, Q, T_real));
 disp('mean after:');
-disp(obj_func(optimized_params, Q, T_real)/size(Q,1));
+disp(obj_func(optimized_params, Q, T_real));
+
 
 %Параметры DH (по паспорту):
 %_____________________
@@ -56,29 +59,38 @@ disp(obj_func(optimized_params, Q, T_real)/size(Q,1));
 
 %----------------------------------------------------------------%
 function total_diff = obj_func(params, Q, T_real)
+    diff = 0;
     total_diff = 0;
     d1 = params(1);
     a1 = params(2);
     alpha1 = params(3);
-
+    theta1 = params(10);
+    
     d2 = params(4);
     a2 = params(5);
     alpha2 = params(6);
+    theta2 = params(11);
 
     d3 = params(7);
     a3 = params(8);
     alpha3 = params(9);
+    theta3 = params(12);
     
     for i = 1:size(Q, 1)
-        T_kinematic = T_dh(Q(i, 1), d1, alpha1, a1) *  ... 
-                      T_dh(Q(i, 2), d2, alpha2, a2) * ...
-                      T_dh(Q(i, 3), d3, alpha3, a3);
+        T_kinematic = T_dh(Q(i, 1) + theta1, d1, alpha1, a1) *  ... 
+                      T_dh(Q(i, 2) + theta2, d2, alpha2, a2) * ...
+                      T_dh(Q(i, 3) + theta3, d3, alpha3, a3);
         %d = T_kinematic(1:3, 4);
         %R = T_kinematic(1:3, 1:3);
+        
                   
-        diff = norm(T_kinematic - T_real(:, :, i), 'fro');
+%         diff = norm(T_kinematic - T_real(:, :, i), 'fro')
+        
+        diff = norm(T_kinematic(1:3,4) - T_real(1:3, 4, i),2)^2;
         total_diff = total_diff + diff;
     end
+    
+    
 end
 %R_z(theta) - матрица поворота на угол theta отн-но оси Z
 %T_z(d) - матрица смещения на величину d вдоль оси Z
