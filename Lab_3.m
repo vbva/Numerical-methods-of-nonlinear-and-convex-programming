@@ -23,6 +23,10 @@ options = optimoptions('fmincon','Display','iter','Algorithm','sqp');
 
 disp('Optimal parameters:');
 disp(optimized_params);
+disp('mean before:');
+disp(obj_func(init_par, Q, T_real)/size(Q,1));
+disp('mean after:');
+disp(obj_func(optimized_params, Q, T_real)/size(Q,1));
 
 %Параметры DH (по паспорту):
 %_____________________
